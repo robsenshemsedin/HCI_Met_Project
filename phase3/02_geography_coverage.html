@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Unlocated Collection — Met Open Access</title>
+<script src="vendor/d3.v7.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1714; --paper:#f3efe7; --paper2:#e9e3d6;
+    --present:#3a6b5e;     /* located = grounded green */
+    --missing:#c2502f;     /* unlocated = warning terracotta */
+    --muted:#8a8073; --line:#cfc6b5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:Georgia,'Iowan Old Style',serif;line-height:1.5}
+  .wrap{max-width:1060px;margin:0 auto;padding:48px 28px 80px}
+  .eyebrow{font-family:'Helvetica Neue',Arial,sans-serif;text-transform:uppercase;
+    letter-spacing:.22em;font-size:12px;color:var(--muted);margin:0 0 14px}
+  h1{font-size:clamp(34px,6vw,60px);line-height:1.02;margin:0 0 18px;font-weight:400;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:var(--missing)}
+  .lede{font-size:19px;max-width:60ch;color:#3b352d;margin:0 0 8px}
+  .source{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);margin-top:10px}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--muted);margin:56px 0 6px;font-weight:700}
+  .sub{font-size:16px;color:#4a4339;margin:0 0 22px;max-width:66ch}
+  /* hero split bar */
+  .hero{margin:38px 0 10px;border:1px solid var(--line);background:var(--paper2);
+    border-radius:10px;overflow:hidden;display:flex;height:130px;position:relative}
+  .hero .seg{display:flex;flex-direction:column;justify-content:center;padding:0 26px;color:#fff}
+  .hero .present{background:var(--present)}
+  .hero .missing{background:var(--missing)}
+  .hero .pct{font-size:40px;font-weight:700;font-family:'Helvetica Neue',Arial,sans-serif;line-height:1}
+  .hero .lbl{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.04em;margin-top:6px;opacity:.95}
+  .hero .cnt{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;opacity:.8;margin-top:2px}
+  .legend{display:flex;gap:22px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;margin:14px 0 0;color:#4a4339}
+  .swatch{display:inline-block;width:13px;height:13px;border-radius:2px;margin-right:7px;vertical-align:middle}
+  /* chart rows */
+  .chart{margin-top:18px}
+  .row{display:grid;grid-template-columns:230px 1fr 64px;align-items:center;gap:14px;margin:5px 0}
+  .row .name{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;text-align:right;color:#37312a}
+  .bar{height:26px;background:var(--paper2);border-radius:3px;overflow:hidden;display:flex;cursor:default}
+  .bar .p{background:var(--present);height:100%}
+  .bar .m{background:var(--missing);height:100%}
+  .row .val{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted)}
+  .tip{position:fixed;pointer-events:none;background:var(--ink);color:#f3efe7;font-family:'Helvetica Neue',Arial,sans-serif;
+    font-size:12.5px;padding:8px 11px;border-radius:6px;opacity:0;transition:opacity .12s;max-width:240px;z-index:10;line-height:1.45}
+  .note{font-size:15px;color:#4a4339;max-width:64ch;border-left:3px solid var(--missing);padding:4px 0 4px 18px;margin:30px 0 0}
+  .foot{margin-top:60px;border-top:1px solid var(--line);padding-top:16px;
+    font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--muted)}
+  .toggle{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;margin:22px 0 4px;display:flex;gap:8px}
+  .toggle button{font:inherit;border:1px solid var(--line);background:var(--paper);color:#4a4339;
+    padding:6px 14px;border-radius:20px;cursor:pointer}
+  .toggle button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  @media(max-width:640px){.row{grid-template-columns:120px 1fr 50px;gap:8px}.row .name{font-size:11px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">The Met Open Access · Phase 1 working subset (30,000 objects)</p>
+  <h1>The <em>unlocated</em> collection</h1>
+  <p class="lede">Most maps of a museum collection quietly drop the objects that have no place attached. This one does the opposite: it counts them.</p>
+  <p class="source">Variables: <b>has_geography_info</b> (country / region / culture present?) × <b>department</b> × <b>time period</b>.</p>
+
+  <div class="hero" id="hero"></div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--present)"></span>Has a place (country, region or culture)</span>
+    <span><span class="swatch" style="background:var(--missing)"></span>No geographic information</span>
+  </div>
+
+  <h2>Where the gap lives — by department</h2>
+  <p class="sub">Each bar is one department, scaled to its share of the subset. The terracotta portion is objects the catalogue cannot place on a map. The gap is not spread evenly — it concentrates.</p>
+  <div class="toggle" id="sortToggle">
+    <button data-sort="missing_pct" class="on">Sort by % unlocated</button>
+    <button data-sort="total">Sort by size</button>
+  </div>
+  <div class="chart" id="deptChart"></div>
+
+  <h2>The gap over time</h2>
+  <p class="sub">Older material is far more likely to be unlocated: provenance thins out the further back you go.</p>
+  <div class="chart" id="timeChart"></div>
+
+  <p class="note">A map drawn only from the located 60% would look authoritative and complete. It would also be a quiet fiction. Showing the missing 40% is the more honest representation — and it turns "missing data" into a finding about how the collection was catalogued.</p>
+
+  <div class="foot">Source: The Metropolitan Museum of Art Open Access dataset, public-domain working subset (30,000 objects, stratified by department). Geography counted present if any of country, region or culture is recorded. · Robsen Shemsedin Yusuf · CM0482, a.y. 2025–26.</div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const tip = d3.select("#tip");
+function showTip(html,e){tip.html(html).style("opacity",1).style("left",(e.clientX+14)+"px").style("top",(e.clientY+14)+"px");}
+function hideTip(){tip.style("opacity",0);}
+
+d3.json("data/geography.json").then(g=>{
+  const fmt=d3.format(",");
+  const pct=v=>Math.round(v*100);
+
+  // hero
+  const pPct=g.present/g.total, mPct=g.missing/g.total;
+  d3.select("#hero").html(`
+    <div class="seg present" style="flex:${g.present}">
+      <div class="pct">${pct(pPct)}%</div><div class="lbl">have a place</div>
+      <div class="cnt">${fmt(g.present)} objects</div></div>
+    <div class="seg missing" style="flex:${g.missing}">
+      <div class="pct">${pct(mPct)}%</div><div class="lbl">have none</div>
+      <div class="cnt">${fmt(g.missing)} objects</div></div>`);
+
+  // dept chart
+  const maxTotal=d3.max(g.by_department,d=>d.total);
+  function drawDept(sortKey){
+    let data=g.by_department.map(d=>({...d,missing_pct:d.missing/d.total}));
+    data.sort((a,b)=> sortKey==="total" ? b.total-a.total : b.missing_pct-a.missing_pct);
+    const sel=d3.select("#deptChart").selectAll(".row").data(data,d=>d.department);
+    const rows=sel.enter().append("div").attr("class","row");
+    rows.append("div").attr("class","name");
+    const bar=rows.append("div").attr("class","bar");
+    bar.append("div").attr("class","p");
+    bar.append("div").attr("class","m");
+    rows.append("div").attr("class","val");
+    const all=rows.merge(sel);
+    all.select(".name").text(d=>d.department);
+    all.select(".bar").style("width",d=> (d.total/maxTotal*100)+"%");
+    all.select(".p").style("width",d=> (d.present/d.total*100)+"%")
+       .on("mousemove",(e,d)=>showTip(`<b>${d.department}</b><br>${fmt(d.present)} located (${pct(d.present/d.total)}%)`,e))
+       .on("mouseleave",hideTip);
+    all.select(".m").style("width",d=> (d.missing/d.total*100)+"%")
+       .on("mousemove",(e,d)=>showTip(`<b>${d.department}</b><br>${fmt(d.missing)} unlocated (${pct(d.missing/d.total)}%)`,e))
+       .on("mouseleave",hideTip);
+    all.select(".val").text(d=> pct(d.missing/d.total)+"%");
+    all.order();
+  }
+  drawDept("missing_pct");
+  d3.selectAll("#sortToggle button").on("click",function(){
+    d3.selectAll("#sortToggle button").classed("on",false);
+    d3.select(this).classed("on",true);
+    drawDept(this.dataset.sort);
+  });
+
+  // time chart
+  const tmax=d3.max(g.by_time,d=>d.present+d.missing)||1;
+  const trows=d3.select("#timeChart").selectAll(".row").data(g.by_time).enter().append("div").attr("class","row");
+  trows.append("div").attr("class","name").text(d=>d.time);
+  const tbar=trows.append("div").attr("class","bar").style("width",d=>((d.present+d.missing)/tmax*100)+"%");
+  tbar.append("div").attr("class","p").style("width",d=>{const t=d.present+d.missing;return (t? d.present/t*100:0)+"%";})
+     .on("mousemove",(e,d)=>showTip(`<b>${d.time}</b><br>${fmt(d.present)} located`,e)).on("mouseleave",hideTip);
+  tbar.append("div").attr("class","m").style("width",d=>{const t=d.present+d.missing;return (t? d.missing/t*100:0)+"%";})
+     .on("mousemove",(e,d)=>showTip(`<b>${d.time}</b><br>${fmt(d.missing)} unlocated`,e)).on("mouseleave",hideTip);
+  trows.append("div").attr("class","val").text(d=>{const t=d.present+d.missing;return t?Math.round(d.missing/t*100)+"%":"—";});
+});
+</script>
+</body>
+</html>
