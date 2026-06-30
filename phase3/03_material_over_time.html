@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What the Collection Is Made Of — Met Open Access</title>
+<script src="vendor/d3.v7.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1714; --paper:#f3efe7; --paper2:#e9e3d6; --muted:#8a8073; --line:#cfc6b5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,'Iowan Old Style',serif;line-height:1.5}
+  .wrap{max-width:1060px;margin:0 auto;padding:48px 28px 80px}
+  .eyebrow{font-family:'Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.22em;font-size:12px;color:var(--muted);margin:0 0 14px}
+  h1{font-size:clamp(34px,6vw,60px);line-height:1.02;margin:0 0 18px;font-weight:400;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:#b06a2c}
+  .lede{font-size:19px;max-width:62ch;color:#3b352d;margin:0 0 8px}
+  .source{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);margin-top:10px}
+  .toggle{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;margin:26px 0 6px;display:flex;gap:8px;align-items:center}
+  .toggle span{color:var(--muted);margin-right:4px}
+  .toggle button{font:inherit;border:1px solid var(--line);background:var(--paper);color:#4a4339;padding:6px 14px;border-radius:20px;cursor:pointer}
+  .toggle button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  #chart{margin-top:10px;position:relative}
+  .axis text{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;fill:var(--muted)}
+  .axis path,.axis line{stroke:var(--line)}
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;margin:18px 0 0;color:#4a4339}
+  .legend .item{cursor:pointer;display:flex;align-items:center;opacity:.95;transition:opacity .15s}
+  .legend .item.dim{opacity:.3}
+  .legend .sw{width:13px;height:13px;border-radius:2px;margin-right:7px}
+  .tip{position:fixed;pointer-events:none;background:var(--ink);color:#f3efe7;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;padding:8px 11px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:10;line-height:1.5}
+  .note{font-size:15px;color:#4a4339;max-width:66ch;border-left:3px solid #b06a2c;padding:4px 0 4px 18px;margin:34px 0 0}
+  .note em{font-style:italic}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:46px 0 6px;font-weight:700}
+  .sub{font-size:16px;color:#4a4339;margin:0 0 8px;max-width:66ch}
+  .foot{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">The Met Open Access · Phase 1 working subset (30,000 objects)</p>
+  <h1>What the collection is <em>made of</em></h1>
+  <p class="lede">Every object is some material — paper, metal, clay, stone, cloth. Laid out across time, the collection's material changes character completely from one era to the next.</p>
+  <p class="source">Variables: <b>medium_group</b> (11 material classes) × <b>time_period_group</b> (8 eras). Each band is a material; its thickness is that material's share of the era.</p>
+
+  <div class="toggle" id="modeToggle">
+    <span>Show:</span>
+    <button data-mode="share" class="on">Share of each era (%)</button>
+    <button data-mode="count">Raw object counts</button>
+  </div>
+  <div id="chart"></div>
+  <div class="legend" id="legend"></div>
+
+  <p class="note">Read left to right and the collection changes substance: the ancient eras are <em>ceramic, metal and stone</em> — durable things that survive burial. The modern eras are overwhelmingly <em>paper</em> — prints and drawings. The collection isn't a steady accumulation of "art"; it's a record of what each era made, what survived, and what a museum chose to keep.</p>
+
+  <h2>Why share, not count?</h2>
+  <p class="sub">The raw-count view (toggle above) is dominated by the huge 1800–1899 paper bucket, which flattens every other era. Switching to share-of-era makes the <em>mix</em> comparable, so the material character of antiquity is visible next to that of the 19th century.</p>
+
+  <div class="foot">Source: The Metropolitan Museum of Art Open Access dataset, public-domain working subset (30,000 objects). Material classes derived from the free-text medium field; "Mixed / Other" and "Unknown" retained rather than hidden. · Robsen Shemsedin Yusuf · CM0482, a.y. 2025–26.</div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const tip=d3.select("#tip");
+function showTip(html,e){tip.html(html).style("opacity",1).style("left",(e.clientX+14)+"px").style("top",(e.clientY+14)+"px");}
+function hideTip(){tip.style("opacity",0);}
+
+// warm, museum-ish palette mapped to materials (distinct but harmonious)
+const COLORS={
+  "Paper / Print / Drawing":"#c98a3a",
+  "Mixed / Other":"#9a8f7d",
+  "Metal":"#7d8a99",
+  "Textile":"#9c5a4d",
+  "Ceramic":"#b8743f",
+  "Painting":"#5e7d6f",
+  "Photography":"#4a5560",
+  "Wood":"#866239",
+  "Glass":"#6fa3a0",
+  "Stone":"#8a8073",
+  "Unknown":"#d8cfbf"
+};
+
+d3.json("data/material.json").then(data=>{
+  const times=data.time_order;
+  // order materials by total size (largest first) for stable stacking/legend
+  const totals={};
+  data.mediums.forEach(m=>totals[m]=d3.sum(data.counts,d=>d[m]||0));
+  const mediums=[...data.mediums].sort((a,b)=>totals[b]-totals[a]);
+
+  const fmt=d3.format(",");
+  let mode="share";
+  let hidden=new Set();
+
+  const margin={top:20,right:20,bottom:40,left:48};
+  const W=1004-margin.left-margin.right;
+  const H=440-margin.top-margin.bottom;
+  const svg=d3.select("#chart").append("svg")
+    .attr("viewBox",`0 0 ${W+margin.left+margin.right} ${H+margin.top+margin.bottom}`)
+    .style("width","100%").style("height","auto");
+  const g=svg.append("g").attr("transform",`translate(${margin.left},${margin.top})`);
+  const x=d3.scalePoint().domain(times).range([0,W]);
+  const y=d3.scaleLinear().range([H,0]);
+  const area=d3.area().x((d,i)=>x(times[i])).y0(d=>y(d[0])).y1(d=>y(d[1])).curve(d3.curveCatmullRom);
+  const xAxis=g.append("g").attr("class","axis").attr("transform",`translate(0,${H})`);
+  const yAxis=g.append("g").attr("class","axis");
+
+  function rows(){
+    // build per-time rows with current visible mediums, optionally normalized to share
+    const vis=mediums.filter(m=>!hidden.has(m));
+    return data.counts.map(c=>{
+      const r={time:c.time};
+      let tot=d3.sum(vis,m=>c[m]||0)||1;
+      vis.forEach(m=> r[m]= mode==="share" ? (c[m]||0)/tot : (c[m]||0));
+      return r;
+    });
+  }
+  function draw(){
+    const vis=mediums.filter(m=>!hidden.has(m));
+    const data2=rows();
+    const stack=d3.stack().keys(vis).offset(mode==="share"?d3.stackOffsetExpand:d3.stackOffsetWiggle);
+    // for share we already normalized; use stackOffsetNone for share, wiggle(stream) for counts
+    stack.offset(mode==="share"?d3.stackOffsetNone:d3.stackOffsetWiggle);
+    const series=stack(data2);
+    const yMin=d3.min(series,s=>d3.min(s,d=>d[0]));
+    const yMax=d3.max(series,s=>d3.max(s,d=>d[1]));
+    y.domain([yMin,yMax]);
+    const paths=g.selectAll("path.layer").data(series,s=>s.key);
+    paths.enter().append("path").attr("class","layer")
+        .attr("stroke","#f3efe7").attr("stroke-width",.5)
+      .merge(paths)
+        .attr("fill",s=>COLORS[s.key]||"#999")
+        .on("mousemove",function(e,s){
+          showTip(`<b>${s.key}</b> · ${fmt(totals[s.key])} objects total`,e);
+          d3.selectAll("path.layer").attr("opacity",l=>l.key===s.key?1:.25);
+        })
+        .on("mouseleave",function(){hideTip();d3.selectAll("path.layer").attr("opacity",1);})
+        .transition().duration(450).attr("d",area);
+    paths.exit().remove();
+    xAxis.call(d3.axisBottom(x));
+    if(mode==="share") yAxis.call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")));
+    else yAxis.call(d3.axisLeft(y).ticks(5).tickFormat(d3.format("~s")));
+  }
+
+  // legend
+  const leg=d3.select("#legend").selectAll(".item").data(mediums).enter().append("div")
+    .attr("class","item")
+    .on("click",function(e,m){ if(hidden.has(m))hidden.delete(m); else hidden.add(m);
+       d3.select(this).classed("dim",hidden.has(m)); draw(); });
+  leg.append("span").attr("class","sw").style("background",m=>COLORS[m]||"#999");
+  leg.append("span").text(m=>`${m} (${fmt(totals[m])})`);
+
+  d3.selectAll("#modeToggle button").on("click",function(){
+    d3.selectAll("#modeToggle button").classed("on",false);
+    d3.select(this).classed("on",true); mode=this.dataset.mode; draw();
+  });
+
+  draw();
+});
+</script>
+</body>
+</html>
