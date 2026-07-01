@@ -8,8 +8,8 @@
 <style>
   :root{
     --ink:#1a1714; --paper:#f3efe7; --paper2:#e9e3d6;
-    --present:#3a6b5e;     /* located = grounded green */
-    --missing:#c2502f;     /* unlocated = warning terracotta */
+    --present:#3a6b5e;     
+    --missing:#c2502f;     
     --muted:#8a8073; --line:#cfc6b5;
   }
   *{box-sizing:border-box}
@@ -25,7 +25,7 @@
   h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.16em;
     text-transform:uppercase;color:var(--muted);margin:56px 0 6px;font-weight:700}
   .sub{font-size:16px;color:#4a4339;margin:0 0 22px;max-width:66ch}
-  /* hero split bar */
+  
   .hero{margin:38px 0 10px;border:1px solid var(--line);background:var(--paper2);
     border-radius:10px;overflow:hidden;display:flex;height:130px;position:relative}
   .hero .seg{display:flex;flex-direction:column;justify-content:center;padding:0 26px;color:#fff}
@@ -36,7 +36,7 @@
   .hero .cnt{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;opacity:.8;margin-top:2px}
   .legend{display:flex;gap:22px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;margin:14px 0 0;color:#4a4339}
   .swatch{display:inline-block;width:13px;height:13px;border-radius:2px;margin-right:7px;vertical-align:middle}
-  /* chart rows */
+  
   .chart{margin-top:18px}
   .row{display:grid;grid-template-columns:230px 1fr 64px;align-items:center;gap:14px;margin:5px 0}
   .row .name{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;text-align:right;color:#37312a}
@@ -97,7 +97,6 @@ d3.json("data/geography.json").then(g=>{
   const fmt=d3.format(",");
   const pct=v=>Math.round(v*100);
 
-  // hero
   const pPct=g.present/g.total, mPct=g.missing/g.total;
   d3.select("#hero").html(`
     <div class="seg present" style="flex:${g.present}">
@@ -107,7 +106,6 @@ d3.json("data/geography.json").then(g=>{
       <div class="pct">${pct(mPct)}%</div><div class="lbl">have none</div>
       <div class="cnt">${fmt(g.missing)} objects</div></div>`);
 
-  // dept chart
   const maxTotal=d3.max(g.by_department,d=>d.total);
   function drawDept(sortKey){
     let data=g.by_department.map(d=>({...d,missing_pct:d.missing/d.total}));
@@ -138,7 +136,6 @@ d3.json("data/geography.json").then(g=>{
     drawDept(this.dataset.sort);
   });
 
-  // time chart
   const tmax=d3.max(g.by_time,d=>d.present+d.missing)||1;
   const trows=d3.select("#timeChart").selectAll(".row").data(g.by_time).enter().append("div").attr("class","row");
   trows.append("div").attr("class","name").text(d=>d.time);

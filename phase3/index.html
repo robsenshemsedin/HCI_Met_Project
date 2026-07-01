@@ -1,19 +1,76 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hidden Patterns in the Met Collection</title>
-<style>body{margin:0;background:#f3efe7;color:#1a1714;font-family:Georgia,serif;}
-.w{max-width:680px;margin:0 auto;padding:60px 28px}
-a{display:block;padding:16px 20px;margin:10px 0;background:#fff;border:1px solid #cfc6b5;border-radius:8px;
-color:#1a1714;text-decoration:none;font-size:18px}
-a:hover{border-color:#c2502f}
-.e{font-family:Arial,sans-serif;text-transform:uppercase;letter-spacing:.2em;font-size:12px;color:#8a8073}
-small{color:#8a8073;font-family:Arial,sans-serif;font-size:13px}</style></head>
-<body><div class="w">
-<p class="e">The Met Open Access · Phase 3</p>
-<h1 style="font-weight:400">Hidden Patterns in the Met Collection</h1>
-<p><small>Web representations · Robsen Shemsedin Yusuf · CM0482</small></p>
-<a href="02_geography_coverage.html">The Unlocated Collection — geographic coverage gap →</a>
-<a href="03_material_over_time.html">What the Collection Is Made Of — material over time →</a>
-<a href="04_visibility_explorer.html">The Visible and the Hidden — visibility gap explorer →</a>
-<a href="05_place_and_time.html">From One Place and Time — real objects by culture &amp; era →</a>
-</div></body></html>
+<style>
+  :root{
+    --ink:#1a1714; --paper:#f3efe7; --paper2:#e9e3d6; --muted:#8a8073; --line:#cfc6b5;
+    --accent:#c2502f; --green:#3a6b5e; --gold:#c98a3a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,'Iowan Old Style',serif;line-height:1.55}
+  .wrap{max-width:1000px;margin:0 auto;padding:56px 28px 90px}
+  .eyebrow{font-family:'Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.22em;font-size:12px;color:var(--muted);margin:0 0 16px}
+  h1{font-size:clamp(38px,7vw,68px);line-height:1.02;margin:0 0 20px;font-weight:400;letter-spacing:-.015em}
+  h1 em{font-style:italic;color:var(--accent)}
+  .lede{font-size:20px;max-width:64ch;color:#3b352d;margin:0 0 14px}
+  .thesis{font-size:16px;max-width:66ch;color:#4a4339;border-left:3px solid var(--accent);padding:6px 0 6px 18px;margin:26px 0 0}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:56px 0 18px;font-weight:700}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:680px){.cards{grid-template-columns:1fr}}
+  a.card{display:block;background:#fff;border:1px solid var(--line);border-radius:12px;padding:26px 26px 24px;
+    text-decoration:none;color:inherit;transition:transform .12s,box-shadow .12s,border-color .12s}
+  a.card:hover{transform:translateY(-3px);box-shadow:0 10px 26px rgba(0,0,0,.10);border-color:var(--accent)}
+  .num{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+  .ct{font-size:24px;margin:8px 0 8px;font-weight:400}
+  .cd{font-size:15px;color:#4a4339;margin:0}
+  .tag{display:inline-block;margin-top:14px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11.5px;
+    letter-spacing:.06em;color:var(--accent);text-transform:uppercase}
+  .foot{margin-top:64px;border-top:1px solid var(--line);padding-top:18px;
+    font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">The Metropolitan Museum of Art · Open Access</p>
+  <h1>Hidden patterns in a <em>museum collection</em></h1>
+  <p class="lede">A museum search is a funnel: every filter narrows a list toward the one object you already wanted. These four views do the opposite — they show the shape of the collection first, so its structure, its gaps, and what it makes visible become the subject.</p>
+  <p class="thesis">All four representations draw on the same public-domain working subset of 30,000 objects prepared from the Met Open Access dataset. Each one asks a single question: what does the collection reveal that a table of records keeps hidden?</p>
+
+  <h2>The four representations</h2>
+  <div class="cards">
+    <a class="card" href="02_geography_coverage.html">
+      <div class="num">01 · Geography</div>
+      <div class="ct">The Unlocated Collection</div>
+      <p class="cd">Four in ten objects record no place at all. The gap is not random — it falls almost entirely on prints, photographs and paintings.</p>
+      <span class="tag">geography × department × time →</span>
+    </a>
+    <a class="card" href="03_material_over_time.html">
+      <div class="num">02 · Material</div>
+      <div class="ct">What the Collection Is Made Of</div>
+      <p class="cd">The collection changes substance across time: clay and metal in antiquity, overwhelmingly paper in the modern centuries.</p>
+      <span class="tag">material × time →</span>
+    </a>
+    <a class="card" href="04_visibility_explorer.html">
+      <div class="num">03 · Visibility</div>
+      <div class="ct">The Visible and the Hidden</div>
+      <p class="cd">Only about three objects in a hundred are ever highlighted or placed on a timeline. This is what that ratio looks like, dot by dot.</p>
+      <span class="tag">visibility × department × time →</span>
+    </a>
+    <a class="card" href="05_place_and_time.html">
+      <div class="num">04 · Culture</div>
+      <div class="ct">From One Place and Time</div>
+      <p class="cd">Every culture and every era compared at once, then opened to the real objects behind each cell — a view a search box cannot give.</p>
+      <span class="tag">culture × time →</span>
+    </a>
+  </div>
+
+  <div class="foot">
+    Source: The Metropolitan Museum of Art Open Access dataset (CC0), public-domain working subset of 30,000 objects prepared in Phase 1.<br>
+    Robsen Shemsedin Yusuf · CM0482 — Human-Computer Interaction and Information Visualisation · Università Ca’ Foscari Venezia, a.y. 2025–26.
+  </div>
+</div>
+</body>
+</html>

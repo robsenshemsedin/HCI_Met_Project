@@ -8,10 +8,10 @@
 <style>
   :root{
     --ink:#1a1714; --paper:#f3efe7; --paper2:#e9e3d6; --muted:#8a8073; --line:#cfc6b5;
-    --hidden:#d8cfbf;         /* the vast, dim majority */
-    --timeline:#c98a3a;       /* timeline work */
-    --highlight:#c2502f;      /* highlight - the rare glow */
-    --both:#7a2f1c;           /* highlight + timeline */
+    --hidden:#d8cfbf;         
+    --timeline:#c98a3a;       
+    --highlight:#c2502f;      
+    --both:#7a2f1c;           
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,'Iowan Old Style',serif;line-height:1.5}
@@ -87,7 +87,7 @@ const COL={"Regular Collection Object":"#d8cfbf","Timeline Work":"#c98a3a","High
 const fmt=d3.format(",");
 
 d3.json("data/visibility.json").then(V=>{
-  // ---- stats ----
+
   const T=V.total, G=V.grand_total;
   const visible=T["Timeline Work"]+T["Highlight"]+T["Highlight and Timeline Work"];
   const stats=[
@@ -99,13 +99,11 @@ d3.json("data/visibility.json").then(V=>{
     .attr("class",d=>"stat"+(d.hi?" hi":""))
     .html(d=>`<div class="n">${d.n}</div><div class="l">${d.l}</div>`);
 
-  // ---- filters ----
   const depts=["All departments",...V.by_department.map(d=>d.department)];
   const times=["All periods",...V.by_time.map(d=>d.time)];
   d3.select("#deptSel").selectAll("option").data(depts).enter().append("option").text(d=>d).attr("value",d=>d);
   d3.select("#timeSel").selectAll("option").data(times).enter().append("option").text(d=>d).attr("value",d=>d);
 
-  // Full three-way cross-tab is available, so every selection is exact.
   function selectionCounts(dept,time){
     let c;
     if(dept==="All departments" && time==="All periods"){ c={...T}; }
@@ -121,16 +119,15 @@ d3.json("data/visibility.json").then(V=>{
     return {counts:c, exact:true, total:d3.sum(VIS,k=>c[k]||0)};
   }
 
-  // ---- dot grid ----
   const dotWrap=d3.select("#dots");
-  const COLS=60, DOT=11, GAP=3, MAXROWS=42, CAP=COLS*MAXROWS; // up to 2520 dots shown
+  const COLS=60, DOT=11, GAP=3, MAXROWS=42, CAP=COLS*MAXROWS;
   function drawDots(dept,time){
     const {counts,exact,total}=selectionCounts(dept,time);
-    // build an array of category per dot, sampled down to CAP but preserving proportions
+
     const shown=Math.min(total,CAP);
     const arr=[];
     VIS.forEach(k=>{ const n=Math.round((counts[k]||0)/ (total||1) * shown); for(let i=0;i<n;i++) arr.push(k); });
-    // shuffle deterministically so colours are interleaved, glow visible
+
     let seed=42; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
     for(let i=arr.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
     const rows=Math.ceil(arr.length/COLS);
@@ -156,7 +153,6 @@ d3.json("data/visibility.json").then(V=>{
   function update(){drawDots(d3.select("#deptSel").property("value"),d3.select("#timeSel").property("value"));}
   drawDots("All departments","All periods");
 
-  // ---- dept breakdown bars (visible sliver) ----
   const maxTotal=d3.max(V.by_department,d=>d.total);
   const data=V.by_department.map(d=>({...d, vis:d["Timeline Work"]+d["Highlight"]+d["Highlight and Timeline Work"]}))
     .sort((a,b)=> (b.vis/b.total)-(a.vis/a.total));

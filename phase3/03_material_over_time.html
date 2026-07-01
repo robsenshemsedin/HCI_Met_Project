@@ -65,7 +65,6 @@ const tip=d3.select("#tip");
 function showTip(html,e){tip.html(html).style("opacity",1).style("left",(e.clientX+14)+"px").style("top",(e.clientY+14)+"px");}
 function hideTip(){tip.style("opacity",0);}
 
-// warm, museum-ish palette mapped to materials (distinct but harmonious)
 const COLORS={
   "Paper / Print / Drawing":"#c98a3a",
   "Mixed / Other":"#9a8f7d",
@@ -82,7 +81,7 @@ const COLORS={
 
 d3.json("data/material.json").then(data=>{
   const times=data.time_order;
-  // order materials by total size (largest first) for stable stacking/legend
+
   const totals={};
   data.mediums.forEach(m=>totals[m]=d3.sum(data.counts,d=>d[m]||0));
   const mediums=[...data.mediums].sort((a,b)=>totals[b]-totals[a]);
@@ -105,7 +104,7 @@ d3.json("data/material.json").then(data=>{
   const yAxis=g.append("g").attr("class","axis");
 
   function rows(){
-    // build per-time rows with current visible mediums, optionally normalized to share
+
     const vis=mediums.filter(m=>!hidden.has(m));
     return data.counts.map(c=>{
       const r={time:c.time};
@@ -118,7 +117,7 @@ d3.json("data/material.json").then(data=>{
     const vis=mediums.filter(m=>!hidden.has(m));
     const data2=rows();
     const stack=d3.stack().keys(vis).offset(mode==="share"?d3.stackOffsetExpand:d3.stackOffsetWiggle);
-    // for share we already normalized; use stackOffsetNone for share, wiggle(stream) for counts
+
     stack.offset(mode==="share"?d3.stackOffsetNone:d3.stackOffsetWiggle);
     const series=stack(data2);
     const yMin=d3.min(series,s=>d3.min(s,d=>d[0]));
@@ -141,7 +140,6 @@ d3.json("data/material.json").then(data=>{
     else yAxis.call(d3.axisLeft(y).ticks(5).tickFormat(d3.format("~s")));
   }
 
-  // legend
   const leg=d3.select("#legend").selectAll(".item").data(mediums).enter().append("div")
     .attr("class","item")
     .on("click",function(e,m){ if(hidden.has(m))hidden.delete(m); else hidden.add(m);
