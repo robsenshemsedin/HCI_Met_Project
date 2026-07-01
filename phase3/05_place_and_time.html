@@ -61,9 +61,16 @@
   <p class="source">Variables: <b>culture</b> × <b>time_period_group</b>, with real object images (Met Open Access API). Every image links to its catalogue record.</p>
 
   <h2 style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:44px 0 6px;font-weight:700">All ten cultures across time — at once</h2>
-  <p style="font-size:16px;color:#4a4339;margin:0 0 8px;max-width:68ch">This is the view a search box cannot give you: every culture and every era in one grid, so their temporal footprints can be compared directly. Darker means more objects. Click any cell to see those real objects below.</p>
+  <p style="font-size:16px;color:#4a4339;margin:0 0 8px;max-width:68ch">This is the view a search box cannot give you: every culture and every era in one grid, so their temporal footprints can be compared directly. Click any cell to see those real objects below.</p>
+  <div class="controls" style="margin:10px 0 4px">
+    <span>Shade by</span>
+    <span class="seg" id="mxSeg" style="display:inline-flex;border:1px solid var(--line);border-radius:20px;overflow:hidden">
+      <button data-m="count" class="on" style="font:inherit;border:0;background:var(--ink);color:var(--paper);padding:7px 14px;cursor:pointer">Total objects</button>
+      <button data-m="share" style="font:inherit;border:0;background:var(--paper);color:#4a4339;padding:7px 14px;cursor:pointer">Share within culture</button>
+    </span>
+  </div>
   <div class="matrix" id="matrix"></div>
-  <p class="mxcap">Antiquity cultures (Greek, Etruscan, Cypriot, Coptic, Roman) sit in the earliest eras; China reaches across nearly all of them. Counts are within the sampled working subset.</p>
+  <p class="mxcap">Counts are the true totals from the full 30,000-object subset. <b>Total objects</b> shows real magnitude — Greek Attic (2,637) genuinely dwarfs Etruscan (187). <b>Share within culture</b> normalises each row, so you can compare <em>when</em> each culture sits in time regardless of its size. The image grid below samples up to 45 objects per selection.</p>
 
   <h2 style="font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:48px 0 6px;font-weight:700">Browse the real objects</h2>
   <div class="controls">
@@ -92,31 +99,50 @@ d3.json("data/composer.json").then(D=>{
   const cultures=D.cultures;
 
   d3.json("data/composer_matrix.json").then(M=>{
+    let mxMode="count";
+    const rowTotals=M.matrix.map(r=>r.total);
     const maxCell=d3.max(M.matrix,r=>d3.max(r.cells));
-    const scale=d3.scaleSqrt().domain([0,maxCell]).range([0,1]);
-    const shade=v=>{ if(!v) return "#f0ece3"; const t=scale(v);
-      return d3.interpolateRgb("#ecdcc6","#9c5a1f")(t); };
-    const textCol=v=> v && scale(v)>0.55 ? "#fff" : "#5a4324";
-    let html='<table class="mx"><thead><tr><th class="rowh"></th>';
-    M.time.forEach(t=> html+=`<th>${t}</th>`);
-    html+='</tr></thead><tbody>';
-    M.matrix.forEach(r=>{
-      html+=`<tr><th class="rowh">${r.culture}</th>`;
-      r.cells.forEach((v,i)=>{
-        html+=`<td><div class="cellbox${v?'':' zero'}" data-c="${r.culture}" data-t="${M.time[i]}" `+
-              `style="background:${shade(v)};color:${textCol(v)}">${v||''}</div></td>`;
+    const shadeCount=v=>{ if(!v) return "#f0ece3"; const t=d3.scaleSqrt().domain([0,maxCell]).range([0,1])(v);
+      return d3.interpolateRgb("#ecdcc6","#7a3d10")(t); };
+    const shadeShare=(v,tot)=>{ if(!v||!tot) return "#f0ece3"; const t=v/tot; // 0..1 within row
+      return d3.interpolateRgb("#ecdcc6","#7a3d10")(Math.sqrt(t)); };
+    const txt=t=> t>0.55?"#fff":"#5a4324";
+
+    function renderMatrix(){
+      let html='<table class="mx"><thead><tr><th class="rowh"></th>';
+      M.time.forEach(t=> html+=`<th>${t}</th>`);
+      html+='<th style="color:#8a8073">total</th></tr></thead><tbody>';
+      M.matrix.forEach(r=>{
+        html+=`<tr><th class="rowh">${r.culture}</th>`;
+        r.cells.forEach((v,i)=>{
+          let bg,disp,tnorm;
+          if(mxMode==="count"){ bg=shadeCount(v); tnorm=d3.scaleSqrt().domain([0,maxCell]).range([0,1])(v||0);
+            disp=v||""; }
+          else { bg=shadeShare(v,r.total); tnorm=r.total? Math.sqrt(v/r.total):0;
+            disp= (r.total&&v)? Math.round(v/r.total*100)+"%":""; }
+          html+=`<td><div class="cellbox${v?'':' zero'}" data-c="${r.culture}" data-t="${M.time[i]}" data-v="${v}" `+
+                `style="background:${bg};color:${txt(tnorm)}">${disp}</div></td>`;
+        });
+        html+=`<td><div style="height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#8a8073;font-variant-numeric:tabular-nums">${r.total}</div></td>`;
+        html+='</tr>';
       });
-      html+='</tr>';
+      html+='</tbody></table>';
+      d3.select("#matrix").html(html);
+      d3.selectAll(".cellbox").filter(function(){return !this.classList.contains("zero");})
+        .on("click",function(){
+          const c=this.dataset.c, t=this.dataset.t;
+          cSel.property("value",c); refreshPeriodOptions(c);
+          pSel.property("value",t); update();
+          document.getElementById("count").scrollIntoView({behavior:"smooth",block:"center"});
+        });
+    }
+    renderMatrix();
+    d3.selectAll("#mxSeg button").on("click",function(){
+      d3.selectAll("#mxSeg button").classed("on",false)
+        .style("background","var(--paper)").style("color","#4a4339");
+      d3.select(this).classed("on",true).style("background","var(--ink)").style("color","var(--paper)");
+      mxMode=this.dataset.m; renderMatrix();
     });
-    html+='</tbody></table>';
-    d3.select("#matrix").html(html);
-    d3.selectAll(".cellbox").filter(function(){return !this.classList.contains("zero");})
-      .on("click",function(){
-        const c=this.dataset.c, t=this.dataset.t;
-        cSel.property("value",c); refreshPeriodOptions(c);
-        pSel.property("value",t); update();
-        document.getElementById("count").scrollIntoView({behavior:"smooth",block:"center"});
-      });
   });
 
   const cSel=d3.select("#cultureSel");
