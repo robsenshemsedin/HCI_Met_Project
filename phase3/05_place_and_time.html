@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From One Place and Time — Met Open Access</title>
+<script src="vendor/d3.v7.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1714; --paper:#f3efe7; --paper2:#e9e3d6; --muted:#8a8073; --line:#cfc6b5; --accent:#b06a2c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,'Iowan Old Style',serif;line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto;padding:48px 28px 80px}
+  .eyebrow{font-family:'Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.22em;font-size:12px;color:var(--muted);margin:0 0 14px}
+  h1{font-size:clamp(34px,6vw,60px);line-height:1.02;margin:0 0 18px;font-weight:400;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:var(--accent)}
+  .lede{font-size:19px;max-width:64ch;color:#3b352d;margin:0 0 8px}
+  .source{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);margin-top:10px}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:30px 0 4px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px}
+  .controls span{color:var(--muted)}
+  select{font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+  .count{font-family:'Helvetica Neue',Arial,sans-serif;font-size:14px;color:#4a4339;margin:16px 0 4px}
+  .count b{color:var(--accent)}
+  /* timeline strip: shows which eras this culture occupies */
+  .strip{display:flex;gap:4px;margin:10px 0 20px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px}
+  .strip .cell{flex:1;text-align:center;padding:7px 2px;border-radius:5px;background:var(--paper2);color:var(--muted);cursor:pointer;border:1px solid transparent;transition:all .12s}
+  .strip .cell.has{background:#e7d3bd;color:#5a4324}
+  .strip .cell.sel{border-color:var(--accent);background:var(--accent);color:#fff}
+  .strip .cell .n{display:block;font-size:13px;font-weight:700;margin-top:2px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-top:12px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;text-decoration:none;color:inherit;display:flex;flex-direction:column;transition:transform .12s,box-shadow .12s}
+  .card:hover{transform:translateY(-3px);box-shadow:0 6px 16px rgba(0,0,0,.12);border-color:var(--accent)}
+  .card .imgwrap{aspect-ratio:1/1;background:var(--paper2);overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .card img{width:100%;height:100%;object-fit:cover;display:block}
+  .card .meta{padding:9px 10px 11px}
+  .card .t{font-size:12.5px;line-height:1.3;color:#2a251f;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card .d{font-family:'Helvetica Neue',Arial,sans-serif;font-size:11px;color:var(--muted);margin-top:5px}
+  .empty{padding:40px 0;color:var(--muted);font-size:16px;font-style:italic}
+  .note{font-size:15px;color:#4a4339;max-width:66ch;border-left:3px solid var(--accent);padding:4px 0 4px 18px;margin:38px 0 0}
+  .note em{font-style:italic}
+  .foot{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">The Met Open Access · Phase 1 working subset · real object images</p>
+  <h1>From one place and <em>time</em></h1>
+  <p class="lede">Pick a culture. The collection's actual public-domain objects from that culture appear below — real images, each opening its page at The Met. The eras a culture spans are part of the story: some fill a single century, others reach across millennia.</p>
+  <p class="source">Variables: <b>culture</b> × <b>time_period_group</b>, with real object images (Met Open Access API). Every image links to its catalogue record.</p>
+
+  <div class="controls">
+    <span>Culture</span>
+    <select id="cultureSel"></select>
+    <span>·</span>
+    <span>Period</span>
+    <select id="periodSel"></select>
+  </div>
+
+  <div class="strip" id="strip"></div>
+  <div class="count" id="count"></div>
+  <div class="grid" id="grid"></div>
+
+  <p class="note">This is the honest version of "seeing a time and place": nothing is invented or reconstructed — every object is really in the collection, shown at its real image, linked to its real record. The <em>gaps</em> are meaningful too. Greek, Etruscan and Coptic works sit in a single era; Chinese and Japanese objects stretch across many. What a museum holds from a culture is never evenly spread across time.</p>
+
+  <div class="foot">Source: The Metropolitan Museum of Art Open Access dataset, public-domain working subset. Images served live from the Met's servers via object links; 439 objects across 10 cultures, sampled up to 45 per culture. · Robsen Shemsedin Yusuf · CM0482, a.y. 2025–26.</div>
+</div>
+
+<script>
+const TIME=["Before 0","0–999","1000–1499","1500–1699","1700–1799","1800–1899","1900–1949","1950–present"];
+const fmt=d3.format(",");
+
+d3.json("data/composer.json").then(D=>{
+  const objs=D.objects;
+  const cultures=D.cultures;
+
+  const cSel=d3.select("#cultureSel");
+  cSel.selectAll("option").data(cultures).enter().append("option").attr("value",d=>d).text(d=>d);
+  const pSel=d3.select("#periodSel");
+
+  function periodsFor(culture){
+    const counts={};
+    objs.filter(o=>o.culture===culture).forEach(o=>{counts[o.period]=(counts[o.period]||0)+1;});
+    return counts;
+  }
+
+  function refreshPeriodOptions(culture){
+    const counts=periodsFor(culture);
+    const opts=["All periods",...TIME.filter(t=>counts[t])];
+    const sel=pSel.selectAll("option").data(opts,d=>d);
+    sel.enter().append("option").attr("value",d=>d).text(d=>d);
+    sel.exit().remove();
+    pSel.property("value","All periods");
+  }
+
+  function drawStrip(culture,selPeriod){
+    const counts=periodsFor(culture);
+    const strip=d3.select("#strip").selectAll(".cell").data(TIME,d=>d);
+    const enter=strip.enter().append("div").attr("class","cell")
+      .on("click",(e,t)=>{ if(counts[t]){ pSel.property("value",t); update(); } });
+    enter.append("span").attr("class","lbl");
+    enter.append("span").attr("class","n");
+    const all=enter.merge(strip);
+    all.classed("has",t=>!!counts[t]).classed("sel",t=>t===selPeriod);
+    all.select(".lbl").text(t=>t);
+    all.select(".n").text(t=>counts[t]?counts[t]:"");
+  }
+
+  function draw(culture,period){
+    let rows=objs.filter(o=>o.culture===culture);
+    if(period!=="All periods") rows=rows.filter(o=>o.period===period);
+    d3.select("#count").html(rows.length
+      ? `<b>${fmt(rows.length)}</b> object${rows.length>1?"s":""} — ${culture}${period!=="All periods"?" · "+period:""}`
+      : "");
+    const grid=d3.select("#grid");
+    grid.selectAll("*").remove();
+    if(!rows.length){ grid.append("div").attr("class","empty").text("No objects for this selection."); return; }
+    const cards=grid.selectAll("a").data(rows).enter().append("a")
+      .attr("class","card").attr("href",d=>d.link||("https://www.metmuseum.org/art/collection/search/"+d.id)).attr("target","_blank").attr("rel","noopener");
+    const iw=cards.append("div").attr("class","imgwrap");
+    iw.append("img").attr("loading","lazy").attr("src",d=>d.img).attr("alt",d=>d.title||"Met object")
+      .on("error",function(){ d3.select(this.parentNode).style("background","#e0d8c8"); d3.select(this).remove(); });
+    const meta=cards.append("div").attr("class","meta");
+    meta.append("div").attr("class","t").text(d=>d.title||"(untitled)");
+    meta.append("div").attr("class","d").text(d=> (d.date&&d.date!=="nan")? d.date : (d.period||""));
+  }
+
+  function update(){
+    const c=cSel.property("value"), p=pSel.property("value");
+    drawStrip(c,p); draw(c,p);
+  }
+  cSel.on("change",()=>{ refreshPeriodOptions(cSel.property("value")); update(); });
+  pSel.on("change",update);
+
+  refreshPeriodOptions(cultures[0]);
+  update();
+});
+</script>
+</body>
+</html>
