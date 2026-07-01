@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Visible and the Hidden — Met Open Access</title>
+<script src="vendor/d3.v7.min.js"></script>
+<style>
+  :root{
+    --ink:#1a1714; --paper:#f3efe7; --paper2:#e9e3d6; --muted:#8a8073; --line:#cfc6b5;
+    --hidden:#d8cfbf;         /* the vast, dim majority */
+    --timeline:#c98a3a;       /* timeline work */
+    --highlight:#c2502f;      /* highlight - the rare glow */
+    --both:#7a2f1c;           /* highlight + timeline */
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:Georgia,'Iowan Old Style',serif;line-height:1.5}
+  .wrap{max-width:1060px;margin:0 auto;padding:48px 28px 80px}
+  .eyebrow{font-family:'Helvetica Neue',Arial,sans-serif;text-transform:uppercase;letter-spacing:.22em;font-size:12px;color:var(--muted);margin:0 0 14px}
+  h1{font-size:clamp(34px,6vw,62px);line-height:1.02;margin:0 0 18px;font-weight:400;letter-spacing:-.01em}
+  h1 em{font-style:italic;color:var(--highlight)}
+  .lede{font-size:19px;max-width:62ch;color:#3b352d;margin:0 0 8px}
+  .source{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);margin-top:10px}
+  .stat-row{display:flex;gap:34px;margin:30px 0 6px;flex-wrap:wrap}
+  .stat .n{font-size:34px;font-weight:700;font-family:'Helvetica Neue',Arial,sans-serif;line-height:1}
+  .stat .l{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted);margin-top:4px;max-width:20ch}
+  .stat.hi .n{color:var(--highlight)}
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:30px 0 6px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px}
+  .controls span{color:var(--muted)}
+  select{font:inherit;padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink)}
+  #dots{margin-top:14px;line-height:0}
+  .cap{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:var(--muted);margin:12px 0 0}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;margin:16px 0 0;color:#4a4339}
+  .sw{width:13px;height:13px;border-radius:2px;margin-right:7px;display:inline-block;vertical-align:middle}
+  .tip{position:fixed;pointer-events:none;background:var(--ink);color:#f3efe7;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;padding:8px 11px;border-radius:6px;opacity:0;transition:opacity .1s;z-index:10;line-height:1.5}
+  h2{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:52px 0 6px;font-weight:700}
+  .sub{font-size:16px;color:#4a4339;margin:0 0 18px;max-width:66ch}
+  .row{display:grid;grid-template-columns:230px 1fr 78px;align-items:center;gap:14px;margin:5px 0}
+  .row .name{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13.5px;text-align:right;color:#37312a}
+  .bar{height:24px;background:var(--paper2);border-radius:3px;overflow:hidden;display:flex}
+  .row .val{font-family:'Helvetica Neue',Arial,sans-serif;font-size:12.5px;color:var(--muted)}
+  .note{font-size:15px;color:#4a4339;max-width:66ch;border-left:3px solid var(--highlight);padding:4px 0 4px 18px;margin:34px 0 0}
+  .note em{font-style:italic}
+  .foot{margin-top:56px;border-top:1px solid var(--line);padding-top:16px;font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">The Met Open Access · Phase 1 working subset (30,000 objects)</p>
+  <h1>The visible and the <em>hidden</em></h1>
+  <p class="lede">A museum decides what to spotlight. In the catalogue, a handful of objects are flagged as "highlights" or placed on curated timelines. Everything else is simply held. This is what that ratio actually looks like.</p>
+  <p class="source">Variables: <b>visibility_group</b> (from is_highlight × is_timeline_work) × <b>department</b> × <b>time period</b>. Each dot is one object.</p>
+
+  <div class="stat-row" id="stats"></div>
+
+  <div class="controls">
+    <span>Show</span>
+    <select id="deptSel"></select>
+    <span>·</span>
+    <select id="timeSel"></select>
+  </div>
+  <div id="dots"></div>
+  <p class="cap" id="dotcap"></p>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--hidden)"></span>Regular collection object</span>
+    <span><span class="sw" style="background:var(--timeline)"></span>Timeline work</span>
+    <span><span class="sw" style="background:var(--highlight)"></span>Highlight</span>
+    <span><span class="sw" style="background:var(--both)"></span>Highlight &amp; timeline</span>
+  </div>
+
+  <h2>The visible fraction, department by department</h2>
+  <p class="sub">Each bar is one department. The coloured sliver on the left is the share flagged as highlight or timeline work. It never grows large — the spotlight is narrow everywhere.</p>
+  <div id="deptChart"></div>
+
+  <p class="note">Roughly <em>97 in every 100 objects</em> are "regular" — never highlighted, never placed on a timeline. The collection the public meets through highlights and timelines is a tiny, curated surface over a vast, largely unseen body. Making that ratio literal — one dot per object — is knowledge a table of counts hides.</p>
+
+  <div class="foot">Source: The Metropolitan Museum of Art Open Access dataset, public-domain working subset (30,000 objects). Visibility derived from the is_highlight and is_timeline_work flags. Every selection is computed directly from the data (full department × period × visibility cross-tabulation); when a selection exceeds the grid, dots are sampled proportionally while percentages reflect the full selection. · Robsen Shemsedin Yusuf · CM0482, a.y. 2025–26.</div>
+</div>
+<div class="tip" id="tip"></div>
+
+<script>
+const tip=d3.select("#tip");
+function showTip(html,e){tip.html(html).style("opacity",1).style("left",(e.clientX+14)+"px").style("top",(e.clientY+14)+"px");}
+function hideTip(){tip.style("opacity",0);}
+const VIS=["Regular Collection Object","Timeline Work","Highlight","Highlight and Timeline Work"];
+const COL={"Regular Collection Object":"#d8cfbf","Timeline Work":"#c98a3a","Highlight":"#c2502f","Highlight and Timeline Work":"#7a2f1c"};
+const fmt=d3.format(",");
+
+d3.json("data/visibility.json").then(V=>{
+  // ---- stats ----
+  const T=V.total, G=V.grand_total;
+  const visible=T["Timeline Work"]+T["Highlight"]+T["Highlight and Timeline Work"];
+  const stats=[
+    {n:fmt(G),l:"objects in the working subset"},
+    {n:fmt(visible),l:"flagged as highlight or timeline work",hi:true},
+    {n:(visible/G*100).toFixed(1)+"%",l:"of the collection is \u201Cvisible\u201D",hi:true},
+  ];
+  d3.select("#stats").selectAll(".stat").data(stats).enter().append("div")
+    .attr("class",d=>"stat"+(d.hi?" hi":""))
+    .html(d=>`<div class="n">${d.n}</div><div class="l">${d.l}</div>`);
+
+  // ---- filters ----
+  const depts=["All departments",...V.by_department.map(d=>d.department)];
+  const times=["All periods",...V.by_time.map(d=>d.time)];
+  d3.select("#deptSel").selectAll("option").data(depts).enter().append("option").text(d=>d).attr("value",d=>d);
+  d3.select("#timeSel").selectAll("option").data(times).enter().append("option").text(d=>d).attr("value",d=>d);
+
+  // Full three-way cross-tab is available, so every selection is exact.
+  function selectionCounts(dept,time){
+    let c;
+    if(dept==="All departments" && time==="All periods"){ c={...T}; }
+    else if(dept!=="All departments" && time==="All periods"){
+      const r=V.by_department.find(d=>d.department===dept);
+      c={}; VIS.forEach(k=>c[k]=r[k]);
+    }
+    else if(dept==="All departments" && time!=="All periods"){
+      const r=V.by_time.find(d=>d.time===time);
+      c={}; VIS.forEach(k=>c[k]=r[k]);
+    }
+    else { c={...V.cross[dept][time]}; }
+    return {counts:c, exact:true, total:d3.sum(VIS,k=>c[k]||0)};
+  }
+
+  // ---- dot grid ----
+  const dotWrap=d3.select("#dots");
+  const COLS=60, DOT=11, GAP=3, MAXROWS=42, CAP=COLS*MAXROWS; // up to 2520 dots shown
+  function drawDots(dept,time){
+    const {counts,exact,total}=selectionCounts(dept,time);
+    // build an array of category per dot, sampled down to CAP but preserving proportions
+    const shown=Math.min(total,CAP);
+    const arr=[];
+    VIS.forEach(k=>{ const n=Math.round((counts[k]||0)/ (total||1) * shown); for(let i=0;i<n;i++) arr.push(k); });
+    // shuffle deterministically so colours are interleaved, glow visible
+    let seed=42; const rnd=()=>{seed=(seed*1103515245+12345)&0x7fffffff;return seed/0x7fffffff;};
+    for(let i=arr.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+    const rows=Math.ceil(arr.length/COLS);
+    const W=COLS*(DOT+GAP), H=rows*(DOT+GAP);
+    dotWrap.selectAll("svg").remove();
+    const svg=dotWrap.append("svg").attr("viewBox",`0 0 ${W} ${H}`).style("width","100%").style("max-width",W+"px").style("height","auto");
+    svg.selectAll("rect").data(arr).enter().append("rect")
+      .attr("x",(d,i)=>(i%COLS)*(DOT+GAP)).attr("y",(d,i)=>Math.floor(i/COLS)*(DOT+GAP))
+      .attr("width",DOT).attr("height",DOT).attr("rx",2)
+      .attr("fill",d=>COL[d]);
+    const vis=(counts["Timeline Work"]+counts["Highlight"]+counts["Highlight and Timeline Work"]);
+    if(total===0){
+      d3.select("#dotcap").html(`No objects in this selection.`);
+      return;
+    }
+    d3.select("#dotcap").html(
+      `Showing ${fmt(arr.length)} dots for ${fmt(total)} objects — `+
+      `<b style="color:var(--highlight)">${(vis/total*100).toFixed(1)}%</b> highlighted or timeline work.`);
+  }
+
+  d3.select("#deptSel").on("change",update);
+  d3.select("#timeSel").on("change",update);
+  function update(){drawDots(d3.select("#deptSel").property("value"),d3.select("#timeSel").property("value"));}
+  drawDots("All departments","All periods");
+
+  // ---- dept breakdown bars (visible sliver) ----
+  const maxTotal=d3.max(V.by_department,d=>d.total);
+  const data=V.by_department.map(d=>({...d, vis:d["Timeline Work"]+d["Highlight"]+d["Highlight and Timeline Work"]}))
+    .sort((a,b)=> (b.vis/b.total)-(a.vis/a.total));
+  const rows=d3.select("#deptChart").selectAll(".row").data(data).enter().append("div").attr("class","row");
+  rows.append("div").attr("class","name").text(d=>d.department);
+  const bar=rows.append("div").attr("class","bar").style("width",d=>(d.total/maxTotal*100)+"%");
+  VIS.forEach(k=>{
+    bar.append("div").style("height","100%").style("background",COL[k])
+      .style("width",d=>(d[k]/d.total*100)+"%")
+      .on("mousemove",(e,d)=>showTip(`<b>${d.department}</b><br>${k}: ${fmt(d[k])} (${(d[k]/d.total*100).toFixed(1)}%)`,e))
+      .on("mouseleave",hideTip);
+  });
+  rows.append("div").attr("class","val").text(d=>(d.vis/d.total*100).toFixed(1)+"%");
+});
+</script>
+</body>
+</html>
